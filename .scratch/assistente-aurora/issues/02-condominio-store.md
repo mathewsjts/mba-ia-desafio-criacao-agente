@@ -1,6 +1,6 @@
 # 02 Dados do condomínio, restauração e rotas de verificação
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 01
 
 Ver `../spec.md` (Modelo de dados), ADR 0002.

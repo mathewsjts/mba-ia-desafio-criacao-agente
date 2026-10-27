@@ -1,6 +1,6 @@
 # 01 Esqueleto do projeto
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: —
 
 Ver `../spec.md` (Stack e comandos, Layout de módulos).
