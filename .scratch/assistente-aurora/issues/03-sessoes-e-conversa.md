@@ -1,6 +1,6 @@
 # 03 Sessões persistidas e rotas de conversa
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 02
 
 Ver `../spec.md` (Sessão e apartamento, API).
