@@ -1,6 +1,6 @@
 # 07 Especialista do regulamento
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 03
 
 Ver `../spec.md` (Agentes), ADR 0001.

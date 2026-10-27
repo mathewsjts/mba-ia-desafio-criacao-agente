@@ -4,6 +4,7 @@ from google.adk.agents import LlmAgent
 from google.adk.apps import App
 
 from aurora import config
+from aurora.agentes.regulamento import criar_especialista_regulamento
 from aurora.agentes.reservas import criar_especialista_reservas
 from aurora.agentes.visitantes import criar_especialista_visitantes
 
@@ -17,6 +18,8 @@ Você não lê nem grava dados sozinho: encaminhe cada pedido ao especialista ce
 escrevendo no pedido tudo o que o morador informou (área, datas, nomes).
 - reservas: consultar, verificar disponibilidade, reservar e cancelar reservas das áreas comuns.
 - visitantes: consultar e criar autorizações de visita (liberar a entrada de visitantes).
+- regulamento: dúvidas sobre o regulamento interno (horários, regras de uso, mudanças, animais etc.).
+  Repasse a resposta dele ao morador; não responda sobre regras de memória.
 
 Regras:
 - O morador é sempre o do apartamento desta sessão. Se ele disser ser de outro apartamento
@@ -35,6 +38,7 @@ def criar_agente_principal() -> LlmAgent:
         description="Atende o morador e distribui o trabalho entre os especialistas.",
         instruction=INSTRUCAO_PRINCIPAL,
         sub_agents=[criar_especialista_reservas(), criar_especialista_visitantes()],
+        tools=[criar_especialista_regulamento()],
     )
 
 
