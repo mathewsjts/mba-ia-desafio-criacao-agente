@@ -1,6 +1,6 @@
 # 06 Especialista de autorizações de visita
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 05
 
 Ver `../spec.md` (Agentes).
