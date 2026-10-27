@@ -74,7 +74,7 @@ Escolhas de suporte:
 ### 5. Dois moradores, uma reserva
 
 - **A exclusividade vale no instante da gravação.** Ela é garantida pelo índice único parcial [condominio.py:34](src/aurora/condominio.py#L34): `CREATE UNIQUE INDEX reserva_ativa_unica ON reservas(area, data) WHERE status = 'ativa'`.
-- **A segunda gravação é recusada sem erro de servidor.** Quando duas aprovações chegam ao mesmo tempo, as duas podem ter visto a data livre, mas o SQLite serializa as escritas e o segundo `INSERT` falha com `IntegrityError`. [condominio.py:138-159](src/aurora/condominio.py#L138-L159) `reservar` o traduz em `None`, e a tool responde `indisponivel` normalmente, com `200`.
+- **A segunda gravação é recusada sem erro de servidor.** Quando duas aprovações chegam ao mesmo tempo, as duas podem ter visto a data livre, mas o SQLite serializa as escritas e o segundo `INSERT` falha com `IntegrityError`. [condominio.py:138-158](src/aurora/condominio.py#L138-L158) `reservar` o traduz em `None`, e a tool responde `indisponivel` normalmente, com `200`.
 - **Requisições na mesma sessão não colidem.** Um `asyncio.Lock` por sessão ([api.py:118](src/aurora/api.py#L118), [api.py:130](src/aurora/api.py#L130)) evita que duas requisições simultâneas na mesma sessão gravem eventos concorrentes.
 
 ## Como rodar
