@@ -14,10 +14,14 @@ from google.genai import errors as genai_errors
 from google.genai import types
 from pydantic import BaseModel
 
-from aurora import condominio, config
+from aurora import condominio, config, confirmacoes
 from aurora.agentes import criar_app
 
 logger = logging.getLogger("aurora")
+
+AVISO_PENDENCIA = (
+    "Você tem uma confirmação pendente. Aprove ou negue pelo aplicativo antes de fazer um novo pedido."
+)
 
 session_service: DatabaseSessionService
 runner: Runner
@@ -46,6 +50,11 @@ class NovaSessao(BaseModel):
 
 class Mensagem(BaseModel):
     texto: str
+
+
+class RespostaConfirmacao(BaseModel):
+    id: str
+    confirmado: bool
 
 
 async def _buscar_sessao(session_id: str) -> Session:
@@ -87,7 +96,8 @@ async def _executar(session_id: str, conteudo: types.Content) -> list[Event]:
 
 
 async def _resposta(session_id: str, texto: str) -> dict:
-    return {"resposta": texto, "confirmacoes_pendentes": []}
+    sessao = await _buscar_sessao(session_id)
+    return {"resposta": texto, "confirmacoes_pendentes": confirmacoes.pendentes(sessao.events)}
 
 
 @app.post("/sessoes", status_code=201)
@@ -106,10 +116,32 @@ async def criar_sessao(corpo: NovaSessao) -> dict:
 @app.post("/sessoes/{session_id}/mensagens")
 async def enviar_mensagem(session_id: str, corpo: Mensagem) -> dict:
     async with locks[session_id]:
-        await _buscar_sessao(session_id)
+        sessao = await _buscar_sessao(session_id)
+        if pendentes := confirmacoes.pendentes(sessao.events):
+            # Nada executa sem confirmação: enquanto houver pendência, o modelo nem é chamado.
+            return {"resposta": AVISO_PENDENCIA, "confirmacoes_pendentes": pendentes}
         conteudo = types.Content(role="user", parts=[types.Part(text=corpo.texto)])
         eventos = await _executar(session_id, conteudo)
         return await _resposta(session_id, _texto_da_resposta(eventos))
+
+
+@app.post("/sessoes/{session_id}/confirmacoes")
+async def responder_confirmacao(session_id: str, corpo: RespostaConfirmacao) -> dict:
+    async with locks[session_id]:
+        sessao = await _buscar_sessao(session_id)
+        # Garantia 1: só um id pendente nesta sessão retoma a execução; um id desconhecido
+        # ou já respondido recebe 409 sem chegar ao Runner.
+        if corpo.id not in {p["id"] for p in confirmacoes.pendentes(sessao.events)}:
+            raise HTTPException(
+                status_code=409, detail="Não há confirmação pendente com esse id nesta sessão."
+            )
+        eventos = await _executar(session_id, confirmacoes.resposta(corpo.id, corpo.confirmado))
+        resposta = await _resposta(session_id, _texto_da_resposta(eventos))
+        if corpo.confirmado:
+            sessao = await _buscar_sessao(session_id)
+            if not confirmacoes.acao_executada(sessao.events, corpo.id):
+                logger.warning("Confirmação %s aprovada, mas a ação não executou.", corpo.id)
+        return resposta
 
 
 @app.get("/sessoes/{session_id}/eventos")

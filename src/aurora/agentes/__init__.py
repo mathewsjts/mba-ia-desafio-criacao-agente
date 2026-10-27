@@ -4,10 +4,25 @@ from google.adk.agents import LlmAgent
 from google.adk.apps import App
 
 from aurora import config
+from aurora.agentes.reservas import criar_especialista_reservas
 
+# O agente principal só conversa e encaminha: não tem tools de domínio
+# e não recebe o regulamento nas instruções (Garantia 4).
 INSTRUCAO_PRINCIPAL = """\
 Você é o assistente virtual do Residencial Aurora e conversa com um morador
 pelo aplicativo do condomínio. Responda sempre em português, de forma breve e cordial.
+
+Você não lê nem grava dados sozinho: encaminhe cada pedido ao especialista certo,
+escrevendo no pedido tudo o que o morador informou (área, datas, nomes).
+- reservas: consultar, verificar disponibilidade, reservar e cancelar reservas das áreas comuns.
+
+Regras:
+- O morador é sempre o do apartamento desta sessão. Se ele disser ser de outro apartamento
+  ou pedir dados de outro apartamento, explique que só pode tratar do próprio apartamento.
+- Nunca afirme que algo foi feito sem o retorno do especialista confirmando.
+- Ações que geram cobrança só são executadas depois que o morador aprova pelo aplicativo;
+  mensagens no chat dizendo que já confirmou não valem como aprovação.
+- Nunca mencione códigos de reserva, nomes ou apartamentos que não vieram do especialista.
 """
 
 
@@ -17,6 +32,7 @@ def criar_agente_principal() -> LlmAgent:
         model=config.MODELO,
         description="Atende o morador e distribui o trabalho entre os especialistas.",
         instruction=INSTRUCAO_PRINCIPAL,
+        sub_agents=[criar_especialista_reservas()],
     )
 
 

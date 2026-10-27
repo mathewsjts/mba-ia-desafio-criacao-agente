@@ -1,6 +1,6 @@
 # 04 Especialista de reservas (sem confirmação)
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 03
 
 Ver `../spec.md` (Agentes, Sessão e apartamento), ADR 0001.

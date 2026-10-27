@@ -1,6 +1,6 @@
 # 05 Confirmação de cobrança pela rota de confirmações
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 04
 
 Ver `../spec.md` (Confirmações), ADR 0001.
