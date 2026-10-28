@@ -48,6 +48,26 @@ def decisao_do_morador(confirmacao_id: str, confirmado: bool) -> types.Content:
     ))])
 
 
+def negadas_na_invocacao(eventos: list[Event], invocation_id: str) -> set[str]:
+    """Nomes das tools cuja confirmação o morador negou nesta invocação.
+
+    A retomada de uma confirmação continua a invocação do pedido original, e um novo
+    pedido do morador abre outra invocação.
+    """
+    negados = {
+        resposta.id
+        for evento in eventos
+        if evento.invocation_id == invocation_id and evento.author == "user"
+        for resposta in evento.get_function_responses()
+        if resposta.name == FUNCAO_CONFIRMACAO_ADK and not (resposta.response or {}).get("confirmed")
+    }
+    return {
+        _chamada_original(chamada.args).get("name")
+        for chamada in _pedidos_de_confirmacao(eventos)
+        if chamada.id in negados
+    }
+
+
 def acao_executada(eventos: list[Event], confirmacao_id: str) -> bool:
     """Confere que a tool aprovada rodou de fato, e não só ficou com a resposta provisória."""
     chamada_original_id = next(

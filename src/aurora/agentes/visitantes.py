@@ -10,6 +10,7 @@ from aurora.agentes._comum import (
     aprovada_pelo_morador,
     data_invalida,
     linha_de_hoje,
+    respeitar_negacao,
 )
 
 
@@ -72,6 +73,8 @@ Regras:
 - Só diga que a entrada foi liberada quando a tool retornar status autorizada.
 - Quando autorizar_visitante retorna status autorizada, o morador já aprovou pelo aplicativo
   e a entrada está liberada; não diga que ainda falta aprovar.
+- Quando autorizar_visitante retorna status negada, o morador negou pelo aplicativo:
+  diga que a entrada não foi liberada e não chame autorizar_visitante de novo.
 - Responda em português, de forma breve, com o resultado do que foi feito.
 """
 
@@ -86,6 +89,7 @@ def criar_especialista_visitantes() -> LlmAgent:
             "para o apartamento do morador."
         ),
         instruction=_instrucao,
+        before_tool_callback=respeitar_negacao,
         tools=[
             listar_minhas_autorizacoes,
             FunctionTool(autorizar_visitante, require_confirmation=_autoriza_visita),

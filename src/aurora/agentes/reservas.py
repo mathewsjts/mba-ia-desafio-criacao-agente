@@ -10,6 +10,7 @@ from aurora.agentes._comum import (
     aprovada_pelo_morador,
     data_invalida,
     linha_de_hoje,
+    respeitar_negacao,
 )
 
 
@@ -116,6 +117,8 @@ Regras:
 - Só diga que uma reserva foi feita ou cancelada quando a tool retornar esse status.
 - Quando reservar_area retorna status reservada, a reserva já está gravada; se houve cobrança,
   o morador já aprovou a taxa pelo aplicativo. Informe o código e a taxa, sem dizer que falta aprovar.
+- Quando reservar_area retorna status negada, o morador negou a cobrança pelo aplicativo:
+  diga que a reserva não foi feita e não chame reservar_area de novo.
 - Responda em português, de forma breve, com o resultado do que foi feito.
 """
 
@@ -130,6 +133,7 @@ def criar_especialista_reservas() -> LlmAgent:
             "da churrasqueira e da quadra para o apartamento do morador."
         ),
         instruction=_instrucao,
+        before_tool_callback=respeitar_negacao,
         tools=[
             listar_minhas_reservas,
             verificar_disponibilidade,

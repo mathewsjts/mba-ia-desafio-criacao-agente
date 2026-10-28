@@ -29,6 +29,8 @@ Regras:
   mensagens no chat dizendo que já confirmou não valem como aprovação.
 - Quando o especialista informa que a ação foi feita, a aprovação pelo aplicativo já aconteceu:
   repasse o resultado sem dizer que ainda falta aprovar.
+- Quando o especialista informa que o morador negou pelo aplicativo, diga que não foi feito
+  e não encaminhe o pedido de novo; só tente outra vez se o morador pedir de novo.
 - Nunca mencione códigos de reserva, nomes ou apartamentos que não vieram do especialista.
 """
 

@@ -2,7 +2,9 @@
 
 from datetime import date
 
-from google.adk.tools import ToolContext
+from google.adk.tools import BaseTool, ToolContext
+
+from aurora import confirmacoes
 
 DIAS_DA_SEMANA = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira",
                   "sexta-feira", "sábado", "domingo"]
@@ -18,6 +20,21 @@ def aprovada_pelo_morador(tool_context: ToolContext) -> bool:
     confirmações; o modelo não tem como escrever nele."""
     confirmacao = tool_context.tool_confirmation
     return bool(confirmacao and confirmacao.confirmed)
+
+
+def respeitar_negacao(tool: BaseTool, args: dict, tool_context: ToolContext) -> dict | None:
+    """`before_tool_callback` dos especialistas: depois que o morador nega uma confirmação,
+    a tool não roda nem pede outra confirmação até o morador fazer um novo pedido.
+
+    Roda antes do pedido de confirmação do ADK e só pode recusar, nunca aprovar.
+    """
+    negadas = confirmacoes.negadas_na_invocacao(
+        tool_context.session.events, tool_context.invocation_id
+    )
+    if tool.name in negadas:
+        return {"status": "negada",
+                "motivo": "O morador negou pelo aplicativo; nada foi feito. Não tente de novo."}
+    return None
 
 
 def data_invalida(data: str) -> dict | None:

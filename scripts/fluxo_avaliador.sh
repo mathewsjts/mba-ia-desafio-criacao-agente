@@ -85,12 +85,18 @@ antes() {
   confere "detalhes com área e data" bash -c "jq -e '.confirmacoes_pendentes[0].detalhes | tostring | (contains(\"salao-de-festas\") and contains(\"2030-04-20\"))' <<<\"\$0\" >/dev/null" "$r"
   confere "ainda sem reserva do salão" test "$(conta_reservas 101 salao-de-festas 2030-04-20)" = 0
   confere "negar responde 200" test "$(confirma "$S1" "$id" false)" = 200
+  echo "    < $(jq -r .resposta $CONF | head -c 300)"
+  local negada id_negado
+  negada=$(cat $CONF)
+  id_negado=$id
   confere "reserva continua não existindo" test "$(conta_reservas 101 salao-de-festas 2030-04-20)" = 0
+  confere "sem confirmação pendente depois de negar" test -z "$(primeira_pendente "$negada")"
 
   echo "Passo 8"
   r=$(mensagem "$S1" "Reserve o salão de festas para 2030-04-20.")
   id=$(primeira_pendente "$r")
   confere "nova confirmação pendente" test -n "$id"
+  confere "confirmação criada pelo pedido repetido" bash -c "test \"\$1\" != \"\$2\" && jq -e --arg id \"\$1\" 'all(.confirmacoes_pendentes[]?; .id != \$id)' <<<\"\$0\" >/dev/null" "$negada" "$id" "$id_negado"
   confere "aprovar responde 200" test "$(confirma "$S1" "$id" true)" = 200
   echo "    < $(jq -r .resposta $CONF | head -c 300)"
   confere "exatamente uma reserva do salão" test "$(conta_reservas 101 salao-de-festas 2030-04-20)" = 1

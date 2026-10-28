@@ -40,23 +40,24 @@ Escolhas de suporte:
 ### 1. Cobrança ou autorização de visita só com confirmação
 
 - **Quem decide se pede confirmação é o código, não o modelo.**
-  - [agentes/reservas.py:42](src/aurora/agentes/reservas.py#L42) `_gera_cobranca`, ligado em `FunctionTool(reservar_area, require_confirmation=_gera_cobranca)` ([linha 136](src/aurora/agentes/reservas.py#L136)). Pede confirmação quando a área existe, tem `taxa > 0`, a data é válida e a área está livre nessa data. Área sem taxa não pede confirmação.
-  - [agentes/visitantes.py:25](src/aurora/agentes/visitantes.py#L25) `_autoriza_visita`, ligado em `FunctionTool(autorizar_visitante, require_confirmation=_autoriza_visita)` ([linha 91](src/aurora/agentes/visitantes.py#L91)). Pede confirmação para toda autorização nova: data válida e sem autorização com o mesmo nome e data para o apartamento.
-  - Quando a função devolve verdadeiro, o ADK não executa o corpo da tool: ele registra uma chamada `adk_request_confirmation` e pausa. O corpo só roda depois que essa chamada recebe resposta, e a resposta negada devolve "rejected" sem executá-lo. O ADK reavalia a função na retomada.
+  - [agentes/reservas.py:43](src/aurora/agentes/reservas.py#L43) `_gera_cobranca`, ligado em `FunctionTool(reservar_area, require_confirmation=_gera_cobranca)` ([linha 140](src/aurora/agentes/reservas.py#L140)). Pede confirmação quando a área existe, tem `taxa > 0`, a data é válida e a área está livre nessa data. Área sem taxa não pede confirmação.
+  - [agentes/visitantes.py:26](src/aurora/agentes/visitantes.py#L26) `_autoriza_visita`, ligado em `FunctionTool(autorizar_visitante, require_confirmation=_autoriza_visita)` ([linha 95](src/aurora/agentes/visitantes.py#L95)). Pede confirmação para toda autorização nova: data válida e sem autorização com o mesmo nome e data para o apartamento.
+  - Quando a função devolve verdadeiro, o ADK não executa o corpo da tool: ele registra uma chamada `adk_request_confirmation` e pausa. O corpo só roda depois que essa chamada recebe resposta, e a resposta negada não o executa. O ADK reavalia a função na retomada.
+- **Negar encerra o pedido.** O `before_tool_callback` [agentes/\_comum.py:25](src/aurora/agentes/_comum.py#L25) `respeitar_negacao`, dos dois especialistas, roda antes do pedido de confirmação do ADK. Depois que o morador nega, ele responde `negada` à tool negada até o fim daquele pedido ([confirmacoes.py:51](src/aurora/confirmacoes.py#L51) `negadas_na_invocacao`), sem executá-la e sem abrir outra confirmação, mesmo que o modelo tente de novo. Ele só recusa, nunca aprova. Um novo pedido do morador volta a pedir confirmação.
 - **Quando não se pede confirmação, o corpo da tool não grava sem aprovação.** Se a função devolve falso, o corpo roda direto. Isso acontece com área ou data inválida (a tool responde `invalido`), com área com taxa já ocupada na data, com autorização duplicada, ou quando a situação muda entre o pedido e a retomada. Nesses casos:
-  - [reservas.py:69](src/aurora/agentes/reservas.py#L69): `reservar_area` em área com taxa e sem aprovação responde `indisponivel` sem gravar.
-  - [visitantes.py:48](src/aurora/agentes/visitantes.py#L48): `autorizar_visitante` sem aprovação responde `ja_autorizada` sem gravar.
-  - A aprovação é lida por [agentes/\_comum.py:16](src/aurora/agentes/_comum.py#L16) `aprovada_pelo_morador`, de `tool_context.tool_confirmation`. Esse campo só é preenchido pelo ADK a partir da resposta à chamada `adk_request_confirmation`, que só a rota de confirmações envia. O modelo não tem como escrever nele, então essa checagem não depende do que o modelo decide chamar nem do que o morador escreve no chat.
+  - [reservas.py:70](src/aurora/agentes/reservas.py#L70): `reservar_area` em área com taxa e sem aprovação responde `indisponivel` sem gravar.
+  - [visitantes.py:49](src/aurora/agentes/visitantes.py#L49): `autorizar_visitante` sem aprovação responde `ja_autorizada` sem gravar.
+  - A aprovação é lida por [agentes/\_comum.py:18](src/aurora/agentes/_comum.py#L18) `aprovada_pelo_morador`, de `tool_context.tool_confirmation`. Esse campo só é preenchido pelo ADK a partir da resposta à chamada `adk_request_confirmation`, que só a rota de confirmações envia. O modelo não tem como escrever nele, então essa checagem não depende do que o modelo decide chamar nem do que o morador escreve no chat.
 - **A confirmação vem do sistema, não da conversa.**
   - [confirmacoes.py:31](src/aurora/confirmacoes.py#L31) `pendentes` lê dos eventos da sessão as chamadas `adk_request_confirmation` ainda sem resposta.
   - A rota [api.py:131-146](src/aurora/api.py#L131-L146) só aceita um `id` dessa lista. Qualquer outro id, inclusive um já respondido, recebe `409` antes de chegar ao Runner, então aprovar executa uma única vez.
   - Com uma confirmação pendente, uma nova mensagem nem chama o modelo ([api.py:123](src/aurora/api.py#L123)), então "já estou confirmando aqui" não aprova nada.
-- **Verificação depois de aprovar.** [confirmacoes.py:51](src/aurora/confirmacoes.py#L51) `acao_executada` confere que a tool aprovada rodou de fato e registra um aviso se não rodou.
+- **Verificação depois de aprovar.** [confirmacoes.py:71](src/aurora/confirmacoes.py#L71) `acao_executada` confere que a tool aprovada rodou de fato e registra um aviso se não rodou.
 
 ### 2. Cada sessão pertence a um apartamento
 
 - **O apartamento é gravado uma única vez**, no state da sessão, na criação ([api.py:114](src/aurora/api.py#L114)). Apartamento inexistente recebe `422`.
-- **Nenhuma tool recebe apartamento como parâmetro.** Todas o leem do state por [agentes/\_comum.py:11](src/aurora/agentes/_comum.py#L11) `apartamento_da_sessao`, e o modelo não tem como escrever no state.
+- **Nenhuma tool recebe apartamento como parâmetro.** Todas o leem do state por [agentes/\_comum.py:13](src/aurora/agentes/_comum.py#L13) `apartamento_da_sessao`, e o modelo não tem como escrever no state.
 - **As consultas e gravações filtram pelo apartamento** ([condominio.py:111](src/aurora/condominio.py#L111) `listar_reservas`, [condominio.py:159](src/aurora/condominio.py#L159) `cancelar`, autorizações idem). Cancelar a reserva de outro apartamento devolve "você não tem reserva dessa área nessa data".
 - **A disponibilidade não revela o dono.** Ela é consultada por [condominio.py:122](src/aurora/condominio.py#L122) `area_livre`, que devolve só livre ou ocupada. Reservar uma data ocupada devolve só `indisponivel`, então nenhum código, nome ou número de outro apartamento chega à conversa.
 

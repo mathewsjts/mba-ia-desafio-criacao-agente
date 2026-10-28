@@ -107,7 +107,7 @@ Regras:
   - Senão, chama `runner.run_async` com `Content(role="user", parts=[FunctionResponse(name="adk_request_confirmation", id=id, response={"confirmed": confirmado})])`.
   - Depois de aprovar, confere nos eventos que existe uma resposta real (não o placeholder "requires confirmation") para o id da chamada original. Se não houver, registra um warning no log.
 - **`POST /sessoes/{id}/mensagens`** com confirmação pendente: responde `200` sem chamar o modelo, com `resposta` pedindo que o morador responda a confirmação primeiro e a lista atual em `confirmacoes_pendentes`.
-- Negar: a tool devolve "rejected", nada é gravado, e o modelo responde.
+- Negar: a tool devolve `negada`, nada é gravado, e o modelo responde. Até o morador fazer um novo pedido, a tool negada não roda nem abre outra confirmação (`before_tool_callback` dos especialistas), mesmo que o modelo tente chamá-la de novo.
 
 ## API
 
