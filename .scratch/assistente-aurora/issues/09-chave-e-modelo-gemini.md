@@ -7,8 +7,12 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-human
+**Status:** resolved
 
-- [ ] `.env` criado a partir do `.env.example`, fora do Git, com `GOOGLE_API_KEY` preenchida
-- [ ] Modelo escolhido disponível na cota do projeto (padrão ou definido em `AURORA_MODEL`)
-- [ ] Com a API no ar, uma sessão nova recebe uma resposta real do modelo a uma mensagem simples, sem `503`
+- [x] `.env` criado a partir do `.env.example`, fora do Git, com `GOOGLE_API_KEY` preenchida
+- [x] Modelo escolhido disponível na cota do projeto (padrão ou definido em `AURORA_MODEL`)
+- [x] Com a API no ar, uma sessão nova recebe uma resposta real do modelo a uma mensagem simples, sem `503`
+
+## Comments
+
+- 2026-10-28: `.env` criado pelo usuário (ignorado pelo Git, confirmado com `git check-ignore .env`), com `GOOGLE_API_KEY` preenchida e `AURORA_MODEL=gemini-3.5-flash`. Com `uv run aurora-api` no ar, `POST /sessoes {"apartamento":"101"}` e depois `POST /sessoes/{id}/mensagens {"texto":"Olá, bom dia!"}` responderam `200 {"resposta":"Olá, bom dia! Como posso ajudar você hoje?","confirmacoes_pendentes":[]}`, sem `503`.
