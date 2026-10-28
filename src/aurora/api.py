@@ -19,7 +19,7 @@ from aurora.agentes import criar_app
 
 logger = logging.getLogger("aurora")
 
-AVISO_PENDENCIA = (
+AVISO_CONFIRMACAO_PENDENTE = (
     "Você tem uma confirmação pendente. Aprove ou negue pelo aplicativo antes de fazer um novo pedido."
 )
 
@@ -67,13 +67,17 @@ async def _buscar_sessao(session_id: str) -> Session:
 
 
 def _texto_da_resposta(eventos: list[Event]) -> str:
-    """Texto final que o agente principal escreveu nesta execução."""
+    """Texto (sem `thought`) das respostas finais do agente principal nesta execução.
+
+    Os especialistas em `single_turn` também emitem uma resposta final, mas ela é o
+    resultado da tool que o agente principal recebe e reescreve; somá-la duplicaria a resposta.
+    """
     raiz = runner.agent.name
     textos = [
         "".join(parte.text or "" for parte in evento.content.parts if not parte.thought)
         for evento in eventos
         if evento.author == raiz
-        and not evento.partial
+        and evento.is_final_response()
         and evento.content
         and evento.content.parts
     ]
@@ -95,8 +99,7 @@ async def _executar(session_id: str, conteudo: types.Content) -> list[Event]:
     return eventos
 
 
-async def _resposta(session_id: str, texto: str) -> dict:
-    sessao = await _buscar_sessao(session_id)
+def _resposta(sessao: Session, texto: str) -> dict:
     return {"resposta": texto, "confirmacoes_pendentes": confirmacoes.pendentes(sessao.events)}
 
 
@@ -117,12 +120,12 @@ async def criar_sessao(corpo: NovaSessao) -> dict:
 async def enviar_mensagem(session_id: str, corpo: Mensagem) -> dict:
     async with locks[session_id]:
         sessao = await _buscar_sessao(session_id)
-        if pendentes := confirmacoes.pendentes(sessao.events):
-            # Nada executa sem confirmação: enquanto houver pendência, o modelo nem é chamado.
-            return {"resposta": AVISO_PENDENCIA, "confirmacoes_pendentes": pendentes}
+        if confirmacoes.pendentes(sessao.events):
+            # Nada executa sem confirmação: com uma confirmação pendente, o modelo nem é chamado.
+            return _resposta(sessao, AVISO_CONFIRMACAO_PENDENTE)
         conteudo = types.Content(role="user", parts=[types.Part(text=corpo.texto)])
         eventos = await _executar(session_id, conteudo)
-        return await _resposta(session_id, _texto_da_resposta(eventos))
+        return _resposta(await _buscar_sessao(session_id), _texto_da_resposta(eventos))
 
 
 @app.post("/sessoes/{session_id}/confirmacoes")
@@ -135,13 +138,12 @@ async def responder_confirmacao(session_id: str, corpo: RespostaConfirmacao) -> 
             raise HTTPException(
                 status_code=409, detail="Não há confirmação pendente com esse id nesta sessão."
             )
-        eventos = await _executar(session_id, confirmacoes.resposta(corpo.id, corpo.confirmado))
-        resposta = await _resposta(session_id, _texto_da_resposta(eventos))
-        if corpo.confirmado:
-            sessao = await _buscar_sessao(session_id)
-            if not confirmacoes.acao_executada(sessao.events, corpo.id):
-                logger.warning("Confirmação %s aprovada, mas a ação não executou.", corpo.id)
-        return resposta
+        decisao = confirmacoes.decisao_do_morador(corpo.id, corpo.confirmado)
+        eventos = await _executar(session_id, decisao)
+        sessao = await _buscar_sessao(session_id)
+        if corpo.confirmado and not confirmacoes.acao_executada(sessao.events, corpo.id):
+            logger.warning("Confirmação %s aprovada, mas a ação não executou.", corpo.id)
+        return _resposta(sessao, _texto_da_resposta(eventos))
 
 
 @app.get("/sessoes/{session_id}/eventos")
@@ -159,5 +161,5 @@ def reservas_do_apartamento(numero: str) -> list[dict]:
 
 
 @app.get("/apartamentos/{numero}/visitantes")
-def visitantes_do_apartamento(numero: str) -> list[dict]:
+def autorizacoes_do_apartamento(numero: str) -> list[dict]:
     return condominio.listar_autorizacoes(numero)

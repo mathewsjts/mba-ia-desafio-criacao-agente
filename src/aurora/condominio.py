@@ -9,7 +9,6 @@ import secrets
 import sqlite3
 import string
 from contextlib import closing
-from pathlib import Path
 
 from aurora import config
 
@@ -44,8 +43,8 @@ CREATE TABLE autorizacoes_visita (
 ALFABETO_CODIGO = string.ascii_uppercase + string.digits
 
 
-def _conectar(caminho: Path | None = None) -> sqlite3.Connection:
-    conexao = sqlite3.connect(caminho or config.CONDOMINIO_DB, timeout=30)
+def _conectar() -> sqlite3.Connection:
+    conexao = sqlite3.connect(config.CONDOMINIO_DB, timeout=30)
     conexao.row_factory = sqlite3.Row
     conexao.execute("PRAGMA foreign_keys = ON")
     return conexao
@@ -55,11 +54,10 @@ def _ler_json(nome: str) -> list[dict]:
     return json.loads((config.DADOS / nome).read_text(encoding="utf-8"))
 
 
-def criar_banco(caminho: Path | None = None) -> None:
+def criar_banco() -> None:
     """Cria o esquema e carrega o estado inicial de `dados/`."""
-    caminho = caminho or config.CONDOMINIO_DB
-    caminho.parent.mkdir(parents=True, exist_ok=True)
-    with closing(_conectar(caminho)) as conexao, conexao:
+    config.CONDOMINIO_DB.parent.mkdir(parents=True, exist_ok=True)
+    with closing(_conectar()) as conexao, conexao:
         conexao.execute("PRAGMA journal_mode = WAL")
         conexao.executescript(ESQUEMA)
         conexao.executemany(

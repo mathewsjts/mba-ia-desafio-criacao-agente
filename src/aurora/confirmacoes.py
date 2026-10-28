@@ -8,7 +8,7 @@ impede que uma confirmação já respondida execute a ação de novo.
 from google.adk.events import Event
 from google.genai import types
 
-NOME = "adk_request_confirmation"
+FUNCAO_CONFIRMACAO_ADK = "adk_request_confirmation"
 
 
 def _chamada_original(args: dict) -> dict:
@@ -19,24 +19,32 @@ def _ids_respondidos(eventos: list[Event]) -> set[str]:
     return {resposta.id for evento in eventos for resposta in evento.get_function_responses()}
 
 
-def pendentes(eventos: list[Event]) -> list[dict]:
-    respondidos = _ids_respondidos(eventos)
+def _pedidos_de_confirmacao(eventos: list[Event]) -> list[types.FunctionCall]:
     return [
-        {
-            "id": chamada.id,
-            "acao": _chamada_original(chamada.args).get("name"),
-            "detalhes": _chamada_original(chamada.args).get("args", {}),
-        }
+        chamada
         for evento in eventos
         for chamada in evento.get_function_calls()
-        if chamada.name == NOME and chamada.id not in respondidos
+        if chamada.name == FUNCAO_CONFIRMACAO_ADK
     ]
 
 
-def resposta(confirmacao_id: str, confirmado: bool) -> types.Content:
+def pendentes(eventos: list[Event]) -> list[dict]:
+    respondidos = _ids_respondidos(eventos)
+    lista = []
+    for chamada in _pedidos_de_confirmacao(eventos):
+        if chamada.id in respondidos:
+            continue
+        original = _chamada_original(chamada.args)
+        lista.append(
+            {"id": chamada.id, "acao": original.get("name"), "detalhes": original.get("args", {})}
+        )
+    return lista
+
+
+def decisao_do_morador(confirmacao_id: str, confirmado: bool) -> types.Content:
     """Mensagem que devolve a decisão do morador ao Runner, que retoma a tool pendente."""
     return types.Content(role="user", parts=[types.Part(function_response=types.FunctionResponse(
-        name=NOME, id=confirmacao_id, response={"confirmed": confirmado},
+        name=FUNCAO_CONFIRMACAO_ADK, id=confirmacao_id, response={"confirmed": confirmado},
     ))])
 
 
@@ -45,9 +53,8 @@ def acao_executada(eventos: list[Event], confirmacao_id: str) -> bool:
     chamada_original_id = next(
         (
             _chamada_original(chamada.args).get("id")
-            for evento in eventos
-            for chamada in evento.get_function_calls()
-            if chamada.name == NOME and chamada.id == confirmacao_id
+            for chamada in _pedidos_de_confirmacao(eventos)
+            if chamada.id == confirmacao_id
         ),
         None,
     )

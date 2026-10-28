@@ -10,7 +10,7 @@ def api() -> None:
 
 
 def restaurar() -> None:
-    """Volta reservas e visitantes ao estado de `dados/` e apaga todas as sessões."""
+    """Volta reservas e autorizações de visita ao estado de `dados/` e apaga todas as sessões."""
     for caminho in config.VAR.glob("*.db*"):
         caminho.unlink()
     condominio.criar_banco()

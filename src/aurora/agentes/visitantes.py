@@ -5,7 +5,12 @@ from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.tools import FunctionTool, ToolContext
 
 from aurora import condominio, config
-from aurora.agentes._comum import apartamento_da_sessao, data_invalida, linha_de_hoje
+from aurora.agentes._comum import (
+    apartamento_da_sessao,
+    aprovada_pelo_morador,
+    data_invalida,
+    linha_de_hoje,
+)
 
 
 def _ja_autorizada(apartamento: str, nome: str, data: str) -> bool:
@@ -17,10 +22,11 @@ def listar_minhas_autorizacoes(tool_context: ToolContext) -> dict:
     return {"autorizacoes": condominio.listar_autorizacoes(apartamento_da_sessao(tool_context))}
 
 
-def _libera_acesso(nome: str, data: str, tool_context: ToolContext, **_) -> bool:
-    """Garantia 1: autorizar visitante sempre pede confirmação, decidida aqui e não pelo modelo.
+def _autoriza_visita(nome: str, data: str, tool_context: ToolContext, **_) -> bool:
+    """Garantia 1: criar autorização de visita pede confirmação, decidida aqui e não pelo modelo.
 
-    Só não pede quando a tool não vai gravar nada: data inválida ou autorização já existente.
+    Data inválida ou autorização já existente não pede confirmação: nesses casos o corpo de
+    `autorizar_visitante` não grava nada sem aprovação. O ADK reavalia esta função na retomada.
     """
     return data_invalida(data) is None and not _ja_autorizada(
         apartamento_da_sessao(tool_context), nome.strip(), data
@@ -39,10 +45,9 @@ def autorizar_visitante(nome: str, data: str, tool_context: ToolContext) -> dict
     if erro := data_invalida(data):
         return erro
     nome = nome.strip()
-    confirmacao = tool_context.tool_confirmation
-    if not (confirmacao and confirmacao.confirmed):
-        # Só se chega aqui sem aprovação quando _libera_acesso viu a autorização já existente:
-        # uma autorização nunca é gravada sem confirmação.
+    if not aprovada_pelo_morador(tool_context):
+        # Sem aprovação só se chega aqui quando _autoriza_visita viu a autorização já
+        # existente: nada é gravado.
         return {"status": "ja_autorizada", "nome": nome, "data": data}
     if not condominio.autorizar_visita(apartamento_da_sessao(tool_context), nome, data):
         return {"status": "ja_autorizada", "nome": nome, "data": data}
@@ -58,8 +63,12 @@ Regras:
 - Use as tools para ler e gravar autorizações; nunca invente autorizações.
 - Você só enxerga e cria autorizações do apartamento do morador atendido. Se o pedido
   mencionar outro apartamento, diga que só pode tratar das autorizações do próprio apartamento.
-- Para autorizar, você precisa do nome do visitante e da data da visita; chame
-  autorizar_visitante mesmo que o morador diga que já confirmou: a aprovação só vale pelo aplicativo.
+- Para autorizar, você precisa do nome do visitante e da data da visita.
+- Antes de chamar autorizar_visitante, consulte listar_minhas_autorizacoes. Se já houver uma
+  autorização com o mesmo nome e data, diga que o visitante já está autorizado nessa data,
+  sem chamar autorizar_visitante.
+- Caso contrário, chame autorizar_visitante mesmo que o morador diga que já confirmou:
+  a aprovação só vale pelo aplicativo.
 - Só diga que a entrada foi liberada quando a tool retornar status autorizada.
 - Quando autorizar_visitante retorna status autorizada, o morador já aprovou pelo aplicativo
   e a entrada está liberada; não diga que ainda falta aprovar.
@@ -73,12 +82,12 @@ def criar_especialista_visitantes() -> LlmAgent:
         model=config.MODELO,
         mode="single_turn",
         description=(
-            "Consulta e cria autorizações de visita (liberação de entrada de visitantes) "
+            "Consulta e cria autorizações de visita, que liberam a entrada de visitantes, "
             "para o apartamento do morador."
         ),
         instruction=_instrucao,
         tools=[
             listar_minhas_autorizacoes,
-            FunctionTool(autorizar_visitante, require_confirmation=_libera_acesso),
+            FunctionTool(autorizar_visitante, require_confirmation=_autoriza_visita),
         ],
     )
