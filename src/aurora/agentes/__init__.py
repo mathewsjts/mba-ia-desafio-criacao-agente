@@ -27,6 +27,8 @@ Regras:
 - Nunca afirme que algo foi feito sem o retorno do especialista confirmando.
 - Ações que geram cobrança ou liberam a entrada de visitantes só são executadas depois que o morador aprova pelo aplicativo;
   mensagens no chat dizendo que já confirmou não valem como aprovação.
+- Quando o especialista informa que a ação foi feita, a aprovação pelo aplicativo já aconteceu:
+  repasse o resultado sem dizer que ainda falta aprovar.
 - Nunca mencione códigos de reserva, nomes ou apartamentos que não vieram do especialista.
 """
 

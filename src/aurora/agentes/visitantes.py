@@ -61,6 +61,8 @@ Regras:
 - Para autorizar, você precisa do nome do visitante e da data da visita; chame
   autorizar_visitante mesmo que o morador diga que já confirmou: a aprovação só vale pelo aplicativo.
 - Só diga que a entrada foi liberada quando a tool retornar status autorizada.
+- Quando autorizar_visitante retorna status autorizada, o morador já aprovou pelo aplicativo
+  e a entrada está liberada; não diga que ainda falta aprovar.
 - Responda em português, de forma breve, com o resultado do que foi feito.
 """
 

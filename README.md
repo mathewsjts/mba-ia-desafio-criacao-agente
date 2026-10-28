@@ -40,8 +40,8 @@ Escolhas de suporte:
 ### 1. Cobrança ou acesso só com confirmação
 
 - **Quem decide se pede confirmação é o código.**
-  - [agentes/reservas.py:37](src/aurora/agentes/reservas.py#L37) `_gera_cobranca`: verdadeiro para área com `taxa > 0`, ligado em `FunctionTool(reservar_area, require_confirmation=_gera_cobranca)` ([linha 127](src/aurora/agentes/reservas.py#L127)).
-  - [agentes/visitantes.py:20](src/aurora/agentes/visitantes.py#L20) `_libera_acesso`: toda autorização nova ([linha 80](src/aurora/agentes/visitantes.py#L80)).
+  - [agentes/reservas.py:37](src/aurora/agentes/reservas.py#L37) `_gera_cobranca`: verdadeiro para área com `taxa > 0`, ligado em `FunctionTool(reservar_area, require_confirmation=_gera_cobranca)` ([linha 129](src/aurora/agentes/reservas.py#L129)).
+  - [agentes/visitantes.py:20](src/aurora/agentes/visitantes.py#L20) `_libera_acesso`: toda autorização nova ([linha 82](src/aurora/agentes/visitantes.py#L82)).
   - O ADK só executa o corpo dessas tools depois de uma resposta `adk_request_confirmation`, e área sem taxa não pede confirmação.
 - **Defesa extra no corpo das tools.** Sem uma aprovação, `reservar_area` não grava reserva com cobrança ([reservas.py:64](src/aurora/agentes/reservas.py#L64)) e `autorizar_visitante` não grava autorização ([visitantes.py:43](src/aurora/agentes/visitantes.py#L43)).
 - **A confirmação vem do sistema, não da conversa.**

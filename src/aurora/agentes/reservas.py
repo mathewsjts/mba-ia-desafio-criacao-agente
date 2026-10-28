@@ -107,6 +107,8 @@ Regras:
 - Para cancelar, use cancelar_reserva com a área e a data; se não houver reserva do morador
   nessa data, informe isso.
 - Só diga que uma reserva foi feita ou cancelada quando a tool retornar esse status.
+- Quando reservar_area retorna status reservada, a reserva já está gravada; se houve cobrança,
+  o morador já aprovou a taxa pelo aplicativo. Informe o código e a taxa, sem dizer que falta aprovar.
 - Responda em português, de forma breve, com o resultado do que foi feito.
 """
 
