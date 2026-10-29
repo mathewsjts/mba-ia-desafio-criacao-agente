@@ -98,7 +98,7 @@ cp .env.example .env
 | Variável | Obrigatória | Descrição |
 |---|---|---|
 | `GOOGLE_API_KEY` | sim | Chave do Google AI Studio. |
-| `GOOGLE_GENAI_USE_VERTEXAI` | não | `FALSE`: usa a API do Google AI Studio, não a Vertex AI. Já é o padrão quando ausente. |
+| `GOOGLE_GENAI_USE_VERTEXAI` | não | Deixe vazio para usar a API do Google AI Studio (padrão). `TRUE` usaria a Vertex AI, que este projeto não usa. |
 | `AURORA_MODEL` | não | Modelo Gemini usado por todos os agentes. Padrão: `gemini-3.5-flash`. |
 
 ### Comandos
